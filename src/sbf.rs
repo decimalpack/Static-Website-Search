@@ -22,15 +22,17 @@ impl SpectralBloomFilter {
 
         // Fill SBF
         let mut sbf: Vec<u32> = vec![0; sbf_size as usize];
-        tokens.into_iter().for_each(|token| {
-            let indices = Self::hash_indices(token, n_hash_functions as u64, sbf_size as u64);
-            let mn = indices.iter().map(|&i| sbf[i]).min().unwrap();
-            indices.into_iter().for_each(|i| {
-                if sbf[i] == mn {
-                    sbf[i] += 1;
-                }
+        tokens
+            .into_iter()
+            .map(|token| Self::hash_indices(token, n_hash_functions as u64, sbf_size as u64))
+            .for_each(|indices| {
+                let mn = indices.iter().map(|&i| sbf[i]).min().unwrap();
+                indices.into_iter().for_each(|i| {
+                    if sbf[i] == mn {
+                        sbf[i] += 1;
+                    }
+                });
             });
-        });
 
         // Return
         SpectralBloomFilter {
@@ -59,9 +61,8 @@ impl SpectralBloomFilter {
 
 #[cfg(test)]
 mod tests {
-    use super::SpectralBloomFilter;
+    use super::*;
     use proptest::prelude::*;
-    use std::collections::HashMap;
     #[test]
     fn hand_written() {
         let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();
@@ -79,6 +80,15 @@ mod tests {
         #[test]
         fn proptest_false_negatives(s in any::<Vec<String>>()) {
             // Even for high false positive rate (99%), there should not be any false negatives
+            let tokens:Vec<&str> = s.iter().map(|string| string.as_str()).collect();
+
+            let sbf = SpectralBloomFilter::new(&tokens, 0.99);
+            let false_negatives = tokens.iter().filter(|token| sbf.get_frequency(token)==0).count();
+            prop_assert_eq!(false_negatives,0);
+        }
+
+        #[test]
+        fn proptest_undershoot(s in any::<Vec<String>>()){
             let mut counter = HashMap::new();
             let tokens:Vec<&str> = s.iter().map(|string| string.as_str()).collect();
             tokens
@@ -86,8 +96,8 @@ mod tests {
                 .for_each(|token| *counter.entry(token).or_insert(0) += 1);
 
             let sbf = SpectralBloomFilter::new(&tokens, 0.99);
-            let false_negatives = counter.into_iter().filter(|(token, _)| sbf.get_frequency(token)==0).count();
-            prop_assert_eq!(false_negatives,0);
+            let undershoot = counter.into_iter().filter(|(token,frequency)| sbf.get_frequency(token)<*frequency).count();
+            prop_assert_eq!(undershoot,0);
         }
     }
 }
