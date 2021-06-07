@@ -1,0 +1,16 @@
+[package]
+name = "static_website_search"
+version = "0.1.0"
+authors = ["decimalpack <decimalpack@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[[bin]]
+name = "sbf"
+path = "src/sbf.rs"
+
+[dev-dependencies]
+proptest = "1.0.0"
