@@ -1,6 +1,6 @@
-mod hash;
+mod murmur3;
 
-use hash::naive_hash;
+use murmur3::murmurhash3_x86_32 as hash_fn;
 use std::collections::HashMap;
 
 /// Spectral Bloom Filter is a probabilistic data structure used to estimate frequency of an item in multiset
@@ -48,7 +48,7 @@ impl SpectralBloomFilter {
 
         // Define function to insert item in SBF
         let insert_item = |&token| {
-            let indices = Self::hash_indices(token, n_hash_functions as u64, sbf_size as u64);
+            let indices = Self::hash_indices(token, n_hash_functions, sbf_size);
             let minimum_value = indices.iter().map(|&i| sbf[i]).min().unwrap();
             indices.into_iter().for_each(|i| {
                 if sbf[i] == minimum_value {
@@ -74,9 +74,9 @@ impl SpectralBloomFilter {
     /// * n_hash_functions: Then number of hash_functions
     /// * sbf_size: The size which will be used for modulo
     ///
-    fn hash_indices(token: &str, n_hash_functions: u64, sbf_size: u64) -> Vec<usize> {
+    fn hash_indices(token: &str, n_hash_functions: u32, sbf_size: u32) -> Vec<usize> {
         (0..n_hash_functions)
-            .map(|i| (naive_hash(token, i) % sbf_size) as usize)
+            .map(|i| (hash_fn(token.as_bytes(), i) % sbf_size) as usize)
             .collect()
     }
 
@@ -110,8 +110,7 @@ impl SpectralBloomFilter {
     /// assert_eq!(sbf.get_frequency("xyz"),0);
     /// ```
     pub fn get_frequency(self: &Self, token: &str) -> u32 {
-        let indices =
-            Self::hash_indices(token, self.n_hash_functions as u64, self.sbf.len() as u64);
+        let indices = Self::hash_indices(token, self.n_hash_functions, self.sbf.len() as u32);
         indices.into_iter().map(|i| self.sbf[i]).min().unwrap()
     }
 }
