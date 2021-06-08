@@ -4,11 +4,11 @@ use hash::naive_hash;
 use std::collections::HashMap;
 
 /// Spectral Bloom Filter is a probabilistic data structure used to estimate frequency of an item in multiset
-/// 
+///
 /// # Guarantees:
 /// * The estimate never undershoots
 /// * There are no false negatives
-/// 
+///
 /// # Members
 /// * n_hash_functions: The number of hash functions utilized by the filter
 /// * sbf: The count vector
@@ -27,7 +27,7 @@ impl SpectralBloomFilter {
     /// # Example
     ///
     /// ```
-    /// use sbf::SpectralBloomFilter;
+    /// use spectral_bloom_filter::SpectralBloomFilter;
     /// let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();
     /// let sbf = SpectralBloomFilter::new(&tokens, 0.01);
     /// assert_eq!(sbf.get_frequency("e"), 3);
@@ -73,7 +73,7 @@ impl SpectralBloomFilter {
     /// * token: The token that will be passed to the hash function
     /// * n_hash_functions: Then number of hash_functions
     /// * sbf_size: The size which will be used for modulo
-    /// 
+    ///
     fn hash_indices(token: &str, n_hash_functions: u64, sbf_size: u64) -> Vec<usize> {
         (0..n_hash_functions)
             .map(|i| (naive_hash(token, i) % sbf_size) as usize)
@@ -103,7 +103,7 @@ impl SpectralBloomFilter {
     /// # Example
     ///
     /// ```
-    /// use sbf::SpectralBloomFilter;
+    /// use spectral_bloom_filter::SpectralBloomFilter;
     /// let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();
     /// let sbf = SpectralBloomFilter::new(&tokens, 0.01);
     /// assert_eq!(sbf.get_frequency("e"), 3);
@@ -118,8 +118,8 @@ impl SpectralBloomFilter {
 
 #[cfg(test)]
 mod tests {
-    use proptest::prelude::*;
     use super::*;
+    use proptest::prelude::*;
     #[test]
     fn hand_written() {
         let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();

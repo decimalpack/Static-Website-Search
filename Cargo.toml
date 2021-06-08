@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "sbf"
-path = "src/sbf.rs"
+name = "spectral_bloom_filter"
+path = "src/spectral_bloom_filter.rs"
 
 [dev-dependencies]
 proptest = "1.0.0"
