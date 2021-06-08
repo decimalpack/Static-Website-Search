@@ -6,9 +6,7 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-
-[[bin]]
+[lib]
 name = "sbf"
 path = "src/sbf.rs"
 
