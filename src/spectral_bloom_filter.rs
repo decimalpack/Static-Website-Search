@@ -5,6 +5,8 @@ use std::collections::HashMap;
 
 /// Spectral Bloom Filter is a probabilistic data structure used to estimate frequency of an item in multiset
 ///
+/// **Warning:** In case of integer overflow, the value is set to MAX of coresponding integer type
+///
 /// # Guarantees:
 /// * The estimate never undershoots
 /// * There are no false negatives
@@ -12,6 +14,21 @@ use std::collections::HashMap;
 /// # Members
 /// * n_hash_functions: The number of hash functions utilized by the filter
 /// * sbf: The count vector
+///
+/// # Example
+///
+/// ```
+/// use spectral_bloom_filter::SpectralBloomFilter;
+/// use std::collections::HashMap;
+///
+/// let mut hash_map: HashMap<String, u32> = HashMap::new();
+/// hash_map.insert("a".to_string(), 42);
+///
+/// let sbf = SpectralBloomFilter::new(&hash_map, 0.01);
+///
+/// assert_eq!(sbf.get_frequency(&"a".to_string()), 42);
+/// assert_eq!(sbf.get_frequency(&"x".to_string()), 0);
+/// ```
 pub struct SpectralBloomFilter {
     n_hash_functions: u32,
     sbf: Vec<u32>,
@@ -20,45 +37,37 @@ pub struct SpectralBloomFilter {
 impl SpectralBloomFilter {
     /// Create new Spectral Bloom Filter (SBF)
     ///
+    /// **Warning:** In case of integer overflow, the value is set to MAX of coresponding integer type
+    /// 
     /// # Arguments
-    /// * tokens: Contains the tokens (possibly duplicate) to be inserted in the SBF
+    /// * counter: Multiset represented as HashMap with elements as key, frequencies as value
     /// * false_positive_rate: A configurable false positive rate in range \[0,1\]. Recommended value 0.1
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use spectral_bloom_filter::SpectralBloomFilter;
-    /// let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();
-    /// let sbf = SpectralBloomFilter::new(&tokens, 0.01);
-    /// assert_eq!(sbf.get_frequency("e"), 3);
-    /// ```
-    pub fn new(tokens: &Vec<&str>, false_positive_rate: f32) -> Self {
-        // Init counter
-        let mut counter = HashMap::new();
-        tokens
-            .iter()
-            .for_each(|token| *counter.entry(token).or_insert(0) += 1);
-
+    pub fn new(counter: &HashMap<String, u32>, false_positive_rate: f32) -> Self {
         // Compute optimal size
-        let n_unique_tokens = counter.len() as u32;
-        let (sbf_size, n_hash_functions) = Self::optimal_size(n_unique_tokens, false_positive_rate);
+        let (sbf_size, n_hash_functions) =
+            Self::optimal_size(counter.keys().count() as u32, false_positive_rate);
 
         // Create SBF of sbf_size
         let mut sbf: Vec<u32> = vec![0; sbf_size as usize];
 
         // Define function to insert item in SBF
-        let insert_item = |&token| {
-            let indices = Self::hash_indices(token, n_hash_functions, sbf_size);
+        let insert_item = |(key, &frequency)| {
+            let indices = Self::hash_indices(key, n_hash_functions, sbf_size);
             let minimum_value = indices.iter().map(|&i| sbf[i]).min().unwrap();
-            indices.into_iter().for_each(|i| {
-                if sbf[i] == minimum_value {
-                    sbf[i] += 1;
+            // In case of overflow, set to MAX value
+            let minimum_value = match minimum_value.checked_add(frequency) {
+                Some(v) => v,
+                None => u32::MAX,
+            };
+            indices.iter().for_each(|&i| {
+                if sbf[i] <= minimum_value {
+                    sbf[i] = minimum_value;
                 }
             });
         };
 
         // Fill SBF
-        tokens.into_iter().for_each(insert_item);
+        counter.into_iter().for_each(insert_item);
 
         // Return
         SpectralBloomFilter {
@@ -70,13 +79,12 @@ impl SpectralBloomFilter {
     /// Given a token, return n indices that correspond to a location in sbf, where n = n_hash_functions
     ///
     /// # Arguments
-    /// * token: The token that will be passed to the hash function
+    /// * key: An element of the multiset / counter
     /// * n_hash_functions: Then number of hash_functions
     /// * sbf_size: The size which will be used for modulo
-    ///
-    fn hash_indices(token: &str, n_hash_functions: u32, sbf_size: u32) -> Vec<usize> {
+    fn hash_indices(key: &String, n_hash_functions: u32, sbf_size: u32) -> Vec<usize> {
         (0..n_hash_functions)
-            .map(|i| (hash_fn(token.as_bytes(), i) % sbf_size) as usize)
+            .map(|i| (hash_fn(key.as_bytes(), i) % sbf_size) as usize)
             .collect()
     }
 
@@ -91,26 +99,18 @@ impl SpectralBloomFilter {
 
     /// Get the frequency estimate for a token
     ///
-    /// If token does not exist, 0 will be returned
+    /// # Returns
+    /// * The frequency estimate, a non-zero positive number
+    /// * 0 if token does not exist
     ///
     /// # Guarantees
     /// * The estimate never undershoots
     /// * There are no false negatives
     ///
     /// # Arguments
-    /// * token: The token whose frequency estimate is required
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use spectral_bloom_filter::SpectralBloomFilter;
-    /// let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();
-    /// let sbf = SpectralBloomFilter::new(&tokens, 0.01);
-    /// assert_eq!(sbf.get_frequency("e"), 3);
-    /// assert_eq!(sbf.get_frequency("xyz"),0);
-    /// ```
-    pub fn get_frequency(self: &Self, token: &str) -> u32 {
-        let indices = Self::hash_indices(token, self.n_hash_functions, self.sbf.len() as u32);
+    /// * key: An element of the multiset / counter
+    pub fn get_frequency(self: &Self, key: &String) -> u32 {
+        let indices = Self::hash_indices(key, self.n_hash_functions, self.sbf.len() as u32);
         indices.into_iter().map(|i| self.sbf[i]).min().unwrap()
     }
 }
@@ -121,37 +121,28 @@ mod tests {
     use proptest::prelude::*;
     #[test]
     fn hand_written() {
-        let tokens: Vec<&str> = ["a", "b", "c", "d", "e", "e", "e"].to_vec();
-        let sbf = SpectralBloomFilter::new(&tokens, 0.01);
-        let mut counter = HashMap::new();
-        tokens
-            .iter()
-            .for_each(|token| *counter.entry(token).or_insert(0) += 1);
-        counter.iter().for_each(|(token, &frequency)| {
+        let mut hash_map: HashMap<String, u32> = HashMap::new();
+        hash_map.insert("a".to_string(), 1);
+        hash_map.insert("b".to_string(), 2);
+        hash_map.insert("c".to_string(), 32);
+        let sbf = SpectralBloomFilter::new(&hash_map, 0.01);
+        hash_map.iter().for_each(|(token, &frequency)| {
             let frq = sbf.get_frequency(token);
             assert_eq!(frq, frequency);
         });
     }
     proptest! {
         #[test]
-        fn proptest_false_negatives(s in any::<Vec<String>>()) {
+        fn proptest_false_negatives(counter in any::<HashMap<String,u32>>()) {
             // Even for high false positive rate (99%), there should not be any false negatives
-            let tokens:Vec<&str> = s.iter().map(|string| string.as_str()).collect();
-
-            let sbf = SpectralBloomFilter::new(&tokens, 0.99);
-            let false_negatives = tokens.iter().filter(|token| sbf.get_frequency(token)==0).count();
+            let sbf = SpectralBloomFilter::new(&counter, 0.99);
+            let false_negatives = counter.keys().filter(|token| sbf.get_frequency(token)==0).count();
             prop_assert_eq!(false_negatives,0);
         }
 
         #[test]
-        fn proptest_undershoot(s in any::<Vec<String>>()){
-            let mut counter = HashMap::new();
-            let tokens:Vec<&str> = s.iter().map(|string| string.as_str()).collect();
-            tokens
-                .iter()
-                .for_each(|token| *counter.entry(token).or_insert(0) += 1);
-
-            let sbf = SpectralBloomFilter::new(&tokens, 0.99);
+        fn proptest_undershoot(counter in any::<HashMap<String,u32>>()){
+            let sbf = SpectralBloomFilter::new(&counter, 0.99);
             let undershoot = counter.into_iter().filter(|(token,frequency)| sbf.get_frequency(token)<*frequency).count();
             prop_assert_eq!(undershoot,0);
         }
