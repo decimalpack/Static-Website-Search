@@ -6,17 +6,18 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = "3.0.0-beta.2"
+
+[dev-dependencies]
+proptest = "1.0.0"
+
 [lib]
 name = "spectral_bloom_filter"
 path = "src/spectral_bloom_filter.rs"
 
-[dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
 [[bin]]
-name = "cli"
+name = "gen_search"
 path = "src/cli.rs"
-
-[dev-dependencies]
-proptest = "1.0.0"
