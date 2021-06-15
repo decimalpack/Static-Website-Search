@@ -1,6 +1,7 @@
 use clap::Clap;
 use serde::{Deserialize, Serialize};
-use spectral_bloom_filter::SpectralBloomFilter;
+use static_website_search::compressor::base2p15;
+use static_website_search::estimator::spectral_bloom_filter::SpectralBloomFilter;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
@@ -86,8 +87,10 @@ fn main() -> std::io::Result<()> {
         .map(|document| {
             let sbf =
                 SpectralBloomFilter::new(&document.term_frequency, false_positive_rate, width);
+            let encoded = base2p15::encode(&sbf.as_bit_string());
+
             SearchItem {
-                sbf_base2p15: sbf.base2p15_encode(),
+                sbf_base2p15: encoded,
                 width: sbf.width,
                 n_hash_functions: sbf.n_hash_functions,
                 document_link: document.document_link,

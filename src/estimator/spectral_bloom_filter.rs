@@ -1,6 +1,4 @@
-mod murmur3;
-
-use murmur3::murmurhash3_x86_32 as hash_fn;
+use crate::hasher::murmur3::murmurhash3_x86_32 as hash_fn;
 use std::collections::HashMap;
 use std::fmt;
 
@@ -19,7 +17,7 @@ use std::fmt;
 /// # Example
 ///
 /// ```
-/// use spectral_bloom_filter::SpectralBloomFilter;
+/// use static_website_search::estimator::spectral_bloom_filter::SpectralBloomFilter;
 /// use std::collections::HashMap;
 ///
 /// let mut hash_map: HashMap<String, u32> = HashMap::new();
@@ -120,31 +118,12 @@ impl SpectralBloomFilter {
         let indices = Self::hash_indices(key, self.n_hash_functions, self.sbf.len() as u32);
         indices.into_iter().map(|i| self.sbf[i]).min().unwrap()
     }
-    pub fn base2p15_encode(&self) -> String {
-        let mut bit_string = self
-            .sbf
+
+    pub fn as_bit_string(&self) -> String {
+        self.sbf
             .iter()
             .map(|&x| format!("{:0width$b}", x, width = self.width as usize))
-            .fold(String::new(), |x, y| format!("{}{}", x, y));
-        let n_padded_bits = (15 - bit_string.len() % 15) % 15;
-        let offset = 161;
-        bit_string.push_str("0".repeat(n_padded_bits).as_str());
-        let mut encoded: Vec<u16> = bit_string
-            .as_bytes()
-            .chunks_exact(15)
-            .map(|fifteen_bits| {
-                fifteen_bits
-                    .iter()
-                    .map(|x| *x as u16 - 48)
-                    .fold(0, |x, y| (x << 1) | y)
-                    + offset
-            })
-            .collect();
-        let padding_char: u16 = format!("{:x}", n_padded_bits).chars().next().unwrap() as u16;
-        encoded.insert(0, padding_char);
-        std::char::decode_utf16(encoded.into_iter())
-            .map(|result| result.unwrap())
-            .collect()
+            .fold(String::new(), |x, y| format!("{}{}", x, y))
     }
 }
 
