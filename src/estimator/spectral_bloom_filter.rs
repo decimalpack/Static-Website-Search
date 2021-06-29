@@ -54,13 +54,13 @@ impl SpectralBloomFilter {
         // Define function to insert item in SBF
         let insert_item = |(key, &frequency)| {
             let indices = Self::hash_indices(key, n_hash_functions, sbf_size);
-            let minimum_value = std::cmp::min(
-                indices.iter().map(|&i| sbf[i]).min().unwrap(),
-                2u32.pow(width) - 1,
-            );
+            let upper_bound = 2u32.pow(width) - 1;
+
+            let minimum_value = indices.iter().map(|&i| sbf[i]).min().unwrap();
+
             // In case of overflow, set to MAX value
             let minimum_value = match minimum_value.checked_add(frequency) {
-                Some(v) => v,
+                Some(v) => std::cmp::min(v, upper_bound),
                 None => 2u32.pow(width) - 1,
             };
             indices.iter().for_each(|&i| {
