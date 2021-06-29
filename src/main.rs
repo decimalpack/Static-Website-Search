@@ -2,22 +2,25 @@ use clap::Clap;
 use serde::{Deserialize, Serialize};
 use static_website_search::compressor::base2p15;
 use static_website_search::estimator::spectral_bloom_filter::SpectralBloomFilter;
-use std::collections::HashMap;
+use static_website_search::preprocessor::naive;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::BufReader;
 
 #[derive(Deserialize, Debug)]
-struct Document {
-    document_link: String,
-    term_frequency: HashMap<String, u32>,
+struct Post {
+    title: String,
+    url: String,
+    body: String,
 }
 
 #[derive(Debug, Serialize)]
 struct SearchItem {
     document_link: String,
+    title: String,
     sbf_base2p15: String,
     width: u32,
+    size: u32,
     n_hash_functions: u32,
 }
 
@@ -79,21 +82,23 @@ fn main() -> std::io::Result<()> {
 
     // Read file
     let buf_reader = BufReader::new(file);
-    let tokens_json: Vec<Document> = serde_json::from_reader(buf_reader)?;
+    let tokens_json: Vec<Post> = serde_json::from_reader(buf_reader)?;
 
     // Create search index with base2p15 encoding
     let search_index: Vec<SearchItem> = tokens_json
         .into_iter()
         .map(|document| {
-            let sbf =
-                SpectralBloomFilter::new(&document.term_frequency, false_positive_rate, width);
+            let term_frequency = naive::tokenize(&document.body);
+            let sbf = SpectralBloomFilter::new(&term_frequency, false_positive_rate, width);
             let encoded = base2p15::encode(&sbf.as_bit_string());
 
             SearchItem {
+                document_link: document.url,
+                title: document.title,
                 sbf_base2p15: encoded,
+                size: sbf.sbf.len() as u32,
                 width: sbf.width,
                 n_hash_functions: sbf.n_hash_functions,
-                document_link: document.document_link,
             }
         })
         .collect();
