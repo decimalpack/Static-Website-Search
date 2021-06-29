@@ -101,7 +101,7 @@ fn main() -> std::io::Result<()> {
     // Write to file using template
     // Instead of template engine, use string replace as hack
     let j = serde_json::to_string(&search_index)?;
-    let template = include_str!("search_template.html");
+    let template = include_str!("assets/search_template.html");
     let search_page = template.replace("UNIQUE_SEARCH_INDEX_PLACEHOLDER", j.as_str());
     std::fs::write(opts.output_file, search_page)
 }
