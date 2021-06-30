@@ -2,13 +2,44 @@
 <html lang="en">
 
 <head>
-    <script src="static_website_search.js" charset="utf-8"></script>
+    <script src="static_website_search.js" charset="utf-8">
+    </script>
 </head>
+
 <body>
     <h1> Search </h1>
     <input type="text" id="search_query" placeholder="Search">
     <input type="button" id="search_btn" onclick="javascript:search()" value="Search">
     <h1> Results </h1>
     <div class="results" id="results"></div>
+    <script>
+
+        function search() {
+            let results_panel = document.getElementById("results");
+            let result_html = "<ul>";
+            let words = document.getElementById("search_query").value.toLowerCase().split(" ");
+
+
+            /*
+            search_sbf takes an Array of words and searches in the search index.
+            For each document, the *score* is calculated as the sum of all word frequencies.
+            Documents with 0 score are filtered out.
+            The documents are sorted in non-increasing order of score and returned 
+
+            The document provides two properties, url and title.
+            The remaining properties are used for internal representation of Spectral Bloom Filter
+            */
+            let ranks = search_sbf(words);
+            for (let item of ranks) {
+                result_html += "<li>";
+                result_html += `<a href=${item.url}>${item.title}</a>`;
+                result_html += "</li>";
+            }
+            result_html += "</ul>";
+            results_panel.innerHTML = result_html;
+        }
+
+    </script>
 </body>
+
 </html>
