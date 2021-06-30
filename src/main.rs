@@ -16,7 +16,7 @@ struct Post {
 
 #[derive(Debug, Serialize)]
 struct SearchItem {
-    document_link: String,
+    url: String,
     title: String,
     sbf_base2p15: String,
     width: u32,
@@ -67,7 +67,7 @@ fn main() -> std::io::Result<()> {
             let encoded = base2p15::encode(&sbf.as_bit_string());
 
             SearchItem {
-                document_link: document.url,
+                url: document.url,
                 title: document.title,
                 sbf_base2p15: encoded,
                 size: sbf.sbf.len() as u32,

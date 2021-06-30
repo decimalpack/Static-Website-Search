@@ -4,7 +4,7 @@ class SpectralBloomFilter {
 		this.sbf_base2p15 = search_item["sbf_base2p15"];
 		this.n_hash_functions = search_item["n_hash_functions"];
 		this.width = search_item["width"];
-		this.document_link = search_item["document_link"];
+		this.url = search_item["url"];
 		this.size = search_item["size"];
 		this.title = search_item["title"];
 	}
@@ -107,25 +107,10 @@ function search_sbf(words) {
 		if (score > 0)
 			results.push({
 				"title": item.title,
-				"url": item.document_link,
+				"url": item.url,
 				"score": score
 			});
 	}
 	results.sort((a, b) => a.score < b.score ? 1 : -1);
 	return results;
-}
-
-function search() {
-	let results_panel = document.getElementById("results");
-	let result_html = "<ul>";
-	let words = document.getElementById("search_query").value.toLowerCase().split(" ");
-	let ranks = search_sbf(words);
-	for (let item of ranks) {
-		result_html += "<li>";
-		result_html += `<a href=${item.url}>${item.title}</a>`;
-		result_html += "</li>";
-	}
-	result_html += "</ul>";
-	results_panel.innerHTML = result_html;
-
 }
