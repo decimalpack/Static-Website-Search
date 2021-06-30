@@ -28,34 +28,8 @@ struct SearchItem {
 #[clap(version = "1.0", author = "Kevin K. <kbknapp@gmail.com>")]
 struct Opts {
     /// The tokens.json file from which to read.
-    /// The file has the following structure:
-    ///
-    /// ```json
-    ///  [
-    ///      {
-    ///          "document_link":"doc1_link"
-    ///          "term_frequency": {
-    ///                  // word as key and frequency as value
-    ///                  "word1":1,
-    ///                  "word2":2,
-    ///           }
-    ///      },
-    ///      {
-    ///          "document_link":"doc2_link"
-    ///          "term_frequency": {
-    ///                  "word1":1,
-    ///                  "word2":2,
-    ///           }
-    ///      }
-    ///      // And so on
-    ///  ]
-    /// ```json
     #[clap(short, long)]
     tokens_file: String,
-
-    /// Name of the output file
-    #[clap(short, long, default_value = "search.html")]
-    output_file: String,
 
     /// The false positive rate, lower rate means higher sizes
     ///
@@ -106,7 +80,10 @@ fn main() -> std::io::Result<()> {
     // Write to file using template
     // Instead of template engine, use string replace as hack
     let j = serde_json::to_string(&search_index)?;
-    let template = include_str!("assets/search_template.html");
-    let search_page = template.replace("UNIQUE_SEARCH_INDEX_PLACEHOLDER", j.as_str());
-    std::fs::write(opts.output_file, search_page)
+    let js_template = include_str!("assets/static_website_search.js");
+    let js_code = js_template.replace("UNIQUE_SEARCH_INDEX_PLACEHOLDER", j.as_str());
+    std::fs::write("static_website_search.js", js_code)?;
+
+    let demo_html = include_str!("assets/demo.html");
+    std::fs::write("demo.html", demo_html)
 }
