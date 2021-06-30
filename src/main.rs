@@ -25,7 +25,7 @@ struct SearchItem {
 }
 
 #[derive(Clap)]
-#[clap(version = "1.0", author = "Kevin K. <kbknapp@gmail.com>")]
+#[clap(version = "0.1", about = "https://github.com/decimalpack/Static-Website-Search")]
 struct Opts {
     /// The tokens.json file from which to read.
     #[clap(short, long)]
