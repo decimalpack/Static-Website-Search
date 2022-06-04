@@ -1,4 +1,4 @@
-use clap::Clap;
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use static_website_search::compressor::base2p15;
 use static_website_search::estimator::spectral_bloom_filter::SpectralBloomFilter;
@@ -24,7 +24,7 @@ struct SearchItem {
     n_hash_functions: u32,
 }
 
-#[derive(Clap)]
+#[derive(Parser, Debug)]
 #[clap(version = "0.1", about = "https://github.com/decimalpack/Static-Website-Search")]
 struct Opts {
     /// The tokens.json file from which to read.
